@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: evidence-vault
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:h2:file:./data/evidencevault-dev}
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
+    driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  data:
+    redis:
+      # Only actually connected to when evidencevault.rate-limit.backend=redis (see
+      # RedisRateLimitStore) - otherwise this connection factory bean exists but is never used.
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+server:
+  port: ${PORT:8080}
+
+evidencevault:
+  jwt:
+    # Generate with: openssl rand -base64 32
+    secret-base64: ${JWT_SECRET_BASE64}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+  encryption:
+    # Generate with: openssl rand -base64 32  (must decode to exactly 32 bytes)
+    master-key-base64: ${EVIDENCE_MASTER_KEY_BASE64}
+    # Optional, comma-separated: retired master keys, kept only long enough for every case's DEK
+    # to be rotated onto the current key (POST /api/cases/{id}/rotate-key). Leave unset normally.
+    previous-master-keys-base64: ${EVIDENCE_PREVIOUS_MASTER_KEYS_BASE64:}
+  storage:
+    dir: ${EVIDENCE_STORAGE_DIR:./data/evidence-blobs}
+    max-user-quota-bytes: ${EVIDENCE_USER_QUOTA_BYTES:5368709120} # 5GB default per user
+  bootstrap-admin:
+    # Creates exactly one ADMIN account on first startup if none exists yet. See
+    # AdminBootstrapSeeder - without this there is no way to reach admin-only endpoints, since
+    # public registration can never create ADMIN accounts (privilege-escalation fix).
+    username: ${BOOTSTRAP_ADMIN_USERNAME:}
+    email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+  seed-demo-data: ${SEED_DEMO_DATA:true} # set false in a real deployment
+  clamav:
+    # Optional malware scanning on upload via an external ClamAV daemon (clamd). Disabled by
+    # default so the app runs without any ClamAV infrastructure present. See README for setup.
+    enabled: ${CLAMAV_ENABLED:false}
+    host: ${CLAMAV_HOST:localhost}
+    port: ${CLAMAV_PORT:3310}
+  rate-limit:
+    # "memory" (default): per-instance, zero extra infra, fine for a single instance.
+    # "redis": shared across every instance behind a load balancer - requires the spring.data.redis.*
+    # connection above to point at a real Redis. See RateLimitFilter / RedisRateLimitStore.
+    backend: ${RATE_LIMIT_BACKEND:memory}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

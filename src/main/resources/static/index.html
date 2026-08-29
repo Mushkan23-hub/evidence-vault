@@ -1,0 +1,2033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evidence Vault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0E11;
+    --panel:#12161B;
+    --panel-2:#181D24;
+    --border:#262B33;
+    --text:#E8E6E1;
+    --text-dim:#8B92A0;
+    --text-faint:#565D6B;
+    --amber:#E8A33D;
+    --amber-dim:#8A6A2E;
+    --green:#4CAF7D;
+    --red:#E8604C;
+    --mono:'IBM Plex Mono', ui-monospace, monospace;
+    --sans:'IBM Plex Sans', system-ui, sans-serif;
+  }
+  [data-theme="light"]{
+    --bg:#F4F2EE;
+    --panel:#FFFFFF;
+    --panel-2:#F0EEE9;
+    --border:#DEDAD2;
+    --text:#1E1C19;
+    --text-dim:#5C5850;
+    --text-faint:#8C877D;
+    --amber:#B97A1E;
+    --amber-dim:#D9A85C;
+    --green:#2F8F5E;
+    --red:#C74836;
+  }
+  [data-theme="light"] ::selection{background:var(--amber); color:#fff;}
+  [data-theme="light"] .chain-dot{box-shadow:none !important;}
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  ::selection{background:var(--amber); color:#0B0E11;}
+
+  /* ===== Layout ===== */
+  #app{display:none; min-height:100vh; grid-template-columns:260px 1fr; grid-template-rows:56px 1fr;}
+  #app.active{display:grid;}
+
+  header.topbar{
+    grid-column:1/3; display:flex; align-items:center; justify-content:space-between;
+    padding:0 20px; border-bottom:1px solid var(--border); background:var(--panel);
+  }
+  .brand{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-weight:600; letter-spacing:.02em;}
+  .brand .tag{
+    width:20px; height:20px; border:1.5px solid var(--amber); border-radius:3px;
+    display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--amber);
+  }
+  .who{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:12.5px; color:var(--text-dim);}
+
+  .theme-toggle{
+    background:none; border:1px solid var(--border); color:var(--text-dim); width:30px; height:30px;
+    border-radius:6px; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center;
+  }
+  .theme-toggle:hover{border-color:var(--amber); color:var(--amber);}
+
+  .profile-menu-wrap{position:relative;}
+  .profile-trigger{
+    background:none; border:1px solid var(--border); border-radius:20px; padding:4px 12px 4px 4px;
+    display:flex; align-items:center; gap:8px; cursor:pointer; font-family:var(--mono); font-size:12.5px; color:var(--text-dim);
+  }
+  .profile-trigger:hover{border-color:var(--amber-dim);}
+  .avatar{
+    width:22px; height:22px; border-radius:50%; background:var(--amber); color:#0B0E11; font-weight:700;
+    font-size:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .profile-dropdown{
+    position:absolute; top:calc(100% + 6px); right:0; background:var(--panel-2); border:1px solid var(--border);
+    border-radius:8px; padding:6px; min-width:150px; display:none; flex-direction:column; gap:2px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35); z-index:50;
+  }
+  .profile-dropdown.open{display:flex;}
+  .dropdown-item{
+    background:none; border:none; text-align:left; padding:9px 10px; border-radius:5px; cursor:pointer;
+    font-family:var(--sans); font-size:13px; color:var(--text);
+  }
+  .dropdown-item:hover{background:var(--panel);}
+
+  /* ===== Settings ===== */
+  .settings-row{display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px;}
+  .settings-row:last-child{border-bottom:none;}
+  .settings-row .k{color:var(--text-dim);}
+  .settings-row .v{font-family:var(--mono); color:var(--text);}
+  .role-badge{
+    border:1px solid var(--amber-dim); color:var(--amber); padding:2px 8px; border-radius:3px;
+    font-size:11px; letter-spacing:.05em;
+  }
+  button.linklike{
+    background:none; border:none; color:var(--text-faint); cursor:pointer; font-family:var(--sans);
+    font-size:12.5px; text-decoration:underline; padding:0;
+  }
+  button.linklike:hover{color:var(--red);}
+
+  nav.sidebar{
+    border-right:1px solid var(--border); background:var(--panel); padding:18px 14px; overflow-y:auto;
+  }
+  nav.sidebar h3{
+    font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--text-faint); margin:18px 4px 8px;
+  }
+  nav.sidebar h3:first-child{margin-top:0;}
+  .nav-item{
+    display:block; width:100%; text-align:left; background:none; border:none; color:var(--text-dim);
+    font-family:var(--sans); font-size:13.5px; padding:9px 10px; border-radius:6px; cursor:pointer;
+    margin-bottom:2px;
+  }
+  .nav-item:hover{background:var(--panel-2); color:var(--text);}
+  .nav-item.active{background:var(--panel-2); color:var(--amber); font-weight:500;}
+
+  main.content{padding:28px 32px; overflow-y:auto;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  h1.page-title{font-family:var(--mono); font-size:20px; font-weight:600; margin:0 0 4px;}
+  p.page-sub{color:var(--text-dim); font-size:13.5px; margin:0 0 26px;}
+
+  /* ===== Cards / panels ===== */
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:20px;
+  }
+  .card + .card{margin-top:16px;}
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+
+  label{display:block; font-size:12px; color:var(--text-dim); margin-bottom:5px; font-family:var(--mono);}
+  input, textarea, select{
+    width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text);
+    padding:9px 11px; border-radius:5px; font-family:var(--sans); font-size:13.5px; margin-bottom:14px;
+  }
+  input:focus, textarea:focus, select:focus{outline:none; border-color:var(--amber);}
+  textarea{resize:vertical; min-height:70px;}
+
+  button.btn{
+    background:var(--amber); color:#0B0E11; border:none; padding:9px 16px; border-radius:5px;
+    font-family:var(--sans); font-weight:600; font-size:13.5px; cursor:pointer;
+  }
+  button.btn:hover{background:#f0af49;}
+  button.btn:disabled{opacity:.5; cursor:not-allowed;}
+  button.btn.ghost{
+    background:none; border:1px solid var(--border); color:var(--text);
+  }
+  button.btn.ghost:hover{border-color:var(--amber); color:var(--amber);}
+  button.btn.danger-ghost{background:none; border:1px solid var(--red); color:var(--red);}
+  button.btn.danger-ghost:hover{background:var(--red); color:#0B0E11;}
+
+  .msg{padding:10px 13px; border-radius:6px; font-size:13px; margin-bottom:14px; font-family:var(--mono);}
+  .msg.err{background:rgba(232,96,76,.1); border:1px solid var(--red); color:var(--red);}
+  .msg.ok{background:rgba(76,175,125,.1); border:1px solid var(--green); color:var(--green);}
+
+  /* ===== Auth screen ===== */
+  #auth{
+    min-height:100vh; display:flex; align-items:stretch; justify-content:center;
+  }
+  .auth-shell{
+    display:flex; max-width:1000px; width:100%; margin:auto; box-shadow:0 20px 60px rgba(0,0,0,.5);
+    border-radius:12px; overflow:hidden;
+  }
+  .auth-hero{
+    flex:1; background:var(--panel-2); padding:48px 40px; border-right:1px solid var(--border);
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  .auth-hero-brand{
+    display:flex; align-items:center; gap:10px; font-family:var(--mono); font-weight:700; font-size:20px; margin-bottom:14px;
+  }
+  .auth-hero-brand .tag{
+    width:30px; height:30px; border:1.5px solid var(--amber); border-radius:5px;
+    display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--amber);
+  }
+  .auth-hero h2{font-size:15px; color:var(--text-dim); font-weight:400; line-height:1.6; margin:0 0 28px;}
+  .auth-hero-feature{display:flex; gap:12px; margin-bottom:18px; align-items:flex-start;}
+  .auth-hero-feature .icon{
+    width:26px; height:26px; border-radius:6px; background:rgba(232,163,61,.1); border:1px solid var(--amber-dim);
+    display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--amber); flex-shrink:0;
+  }
+  .auth-hero-feature .txt b{display:block; font-size:13px; color:var(--text); margin-bottom:2px;}
+  .auth-hero-feature .txt span{font-size:12px; color:var(--text-dim); line-height:1.5;}
+  .auth-form-side{
+    width:380px; flex-shrink:0; background:var(--panel); padding:40px 36px; display:flex; flex-direction:column; justify-content:center;
+  }
+  .auth-card{width:100%;}
+  .auth-brand{
+    display:flex; align-items:center; gap:10px; font-family:var(--mono); font-weight:700; font-size:18px;
+    margin-bottom:6px;
+  }
+  .auth-brand .tag{
+    width:26px; height:26px; border:1.5px solid var(--amber); border-radius:4px;
+    display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--amber);
+  }
+  .auth-sub{color:var(--text-dim); font-size:13px; margin-bottom:24px;}
+  .auth-tabs{display:flex; gap:2px; margin-bottom:20px; background:var(--bg); border-radius:6px; padding:3px;}
+  .auth-tab{
+    flex:1; text-align:center; padding:7px; border-radius:5px; cursor:pointer; font-size:13px;
+    color:var(--text-dim); font-family:var(--mono);
+  }
+  .auth-tab.active{background:var(--panel-2); color:var(--amber);}
+  .auth-form{display:none;}
+  .auth-form.active{display:block;}
+
+  /* ===== Case list ===== */
+  .status-tabs{display:flex; gap:6px; margin-bottom:16px;}
+  .status-tab{
+    background:none; border:1px solid var(--border); color:var(--text-dim); padding:6px 13px;
+    border-radius:5px; font-size:12.5px; font-family:var(--mono); cursor:pointer;
+  }
+  .status-tab.active{border-color:var(--amber); color:var(--amber); background:rgba(232,163,61,.08);}
+  .case-row{
+    display:flex; justify-content:space-between; align-items:center; padding:12px 4px;
+    border-bottom:1px solid var(--border); cursor:pointer; gap:12px;
+  }
+  .case-row:last-child{border-bottom:none;}
+  .case-row:hover .case-title{color:var(--amber);}
+  .case-num{font-family:var(--mono); font-size:11.5px; color:var(--text-faint);}
+  .case-title{font-size:14px; margin-top:2px;}
+  .case-meta{font-size:11.5px; color:var(--text-faint); font-family:var(--mono); text-align:right; flex-shrink:0;}
+  .status-badge{
+    display:inline-block; font-family:var(--mono); font-size:10px; padding:2px 8px; border-radius:3px;
+    letter-spacing:.03em; margin-top:4px;
+  }
+  .status-badge.open{background:rgba(76,175,125,.12); color:var(--green);}
+  .status-badge.closed{background:rgba(139,146,160,.12); color:var(--text-dim);}
+  .status-badge.archived{background:rgba(232,96,76,.08); color:var(--text-faint);}
+
+  /* ===== Evidence tag ===== */
+  .evidence-tag{
+    display:flex; gap:14px; padding:14px; border:1px solid var(--border); border-radius:7px;
+    margin-bottom:10px; background:var(--panel-2);
+  }
+  .evidence-tag .stub{
+    width:6px; border-radius:3px; background:var(--amber-dim); flex-shrink:0;
+  }
+  .evidence-tag.verified .stub{background:var(--green);}
+  .evidence-tag.failed .stub{background:var(--red);}
+  .evidence-body{flex:1; min-width:0;}
+  .evidence-name{font-size:14px; font-weight:500;}
+  .evidence-hash{
+    font-family:var(--mono); font-size:11px; color:var(--text-faint); word-break:break-all; margin-top:5px;
+  }
+  .evidence-actions{display:flex; gap:8px; margin-top:10px;}
+  .evidence-actions button{padding:5px 11px; font-size:12px;}
+  .status-pill{
+    font-family:var(--mono); font-size:10.5px; padding:2px 7px; border-radius:3px; letter-spacing:.03em;
+  }
+  .status-pill.ok{background:rgba(76,175,125,.12); color:var(--green);}
+  .status-pill.bad{background:rgba(232,96,76,.12); color:var(--red);}
+  .status-pill.pending{background:rgba(139,146,160,.12); color:var(--text-dim);}
+  .custody-pill{
+    font-family:var(--mono); font-size:10.5px; padding:2px 7px; border-radius:3px; letter-spacing:.03em; margin-left:6px;
+  }
+  .custody-pill.witnessed{background:rgba(76,175,125,.12); color:var(--green);}
+  .custody-pill.pending{background:rgba(232,163,61,.12); color:var(--amber);}
+
+  .notes-section{margin-top:12px; border-top:1px solid var(--border); padding-top:10px;}
+  .note-item{font-size:12px; color:var(--text-dim); margin-bottom:6px; padding:6px 9px; background:var(--bg); border-radius:5px;}
+  .note-item b{color:var(--text); font-family:var(--mono); font-size:11px;}
+  .note-form{display:flex; gap:6px; margin-top:8px;}
+  .note-form input{margin-bottom:0; flex:1;}
+  .note-form button{padding:8px 12px; font-size:12px;}
+  .toggle-notes{
+    background:none; border:none; color:var(--text-faint); font-size:11.5px; cursor:pointer;
+    text-decoration:underline; padding:0; margin-top:8px; font-family:var(--sans);
+  }
+
+  /* ===== Forensic analysis panel ===== */
+  .analysis-panel{
+    margin-top:10px; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:12px;
+  }
+  .analysis-row{display:flex; justify-content:space-between; font-family:var(--mono); font-size:11.5px; padding:3px 0; gap:10px;}
+  .analysis-row .k{color:var(--text-faint);}
+  .analysis-row .v{color:var(--text); text-align:right; word-break:break-word;}
+  .mismatch-warning{
+    background:rgba(232,96,76,.1); border:1px solid var(--red); color:var(--red); padding:8px 10px;
+    border-radius:5px; font-size:12px; margin-top:8px; font-family:var(--mono);
+  }
+  .hexdump{
+    font-family:var(--mono); font-size:10.5px; color:var(--text-dim); white-space:pre;
+    overflow-x:auto; line-height:1.6; max-height:280px; overflow-y:auto;
+  }
+  .strings-list{max-height:280px; overflow-y:auto; font-family:var(--mono); font-size:11px;}
+  .strings-list div{padding:2px 0; color:var(--text-dim); word-break:break-all; border-bottom:1px solid var(--border);}
+
+  /* ===== Challenges ===== */
+  .progress-bar-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:18px 20px;
+  }
+  .progress-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;}
+  .progress-top .pts{font-family:var(--mono); font-size:20px; font-weight:700; color:var(--amber);}
+  .progress-top .lbl{font-size:12px; color:var(--text-dim);}
+  .progress-track{height:8px; background:var(--bg); border-radius:4px; overflow:hidden;}
+  .progress-fill{height:100%; background:var(--amber); border-radius:4px; transition:width .4s ease;}
+
+  .challenge-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:14px;}
+  .challenge-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:16px; cursor:pointer;
+  }
+  .challenge-card:hover{border-color:var(--amber-dim);}
+  .challenge-card.solved{border-color:var(--green);}
+  .challenge-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .challenge-card-title{font-size:14px; font-weight:500;}
+  .challenge-card.solved .challenge-card-title::after{content:' ✓'; color:var(--green);}
+  .diff-badge{font-family:var(--mono); font-size:9.5px; padding:2px 7px; border-radius:3px; letter-spacing:.03em; flex-shrink:0;}
+  .diff-badge.easy{background:rgba(76,175,125,.12); color:var(--green);}
+  .diff-badge.medium{background:rgba(232,163,61,.12); color:var(--amber);}
+  .diff-badge.hard{background:rgba(232,96,76,.12); color:var(--red);}
+  .challenge-card-meta{display:flex; justify-content:space-between; margin-top:12px; font-family:var(--mono); font-size:11px; color:var(--text-faint);}
+  .challenge-card-pts{color:var(--amber);}
+
+  .leaderboard-row{
+    display:flex; justify-content:space-between; align-items:center; padding:9px 4px;
+    border-bottom:1px solid var(--border); font-size:13px;
+  }
+  .leaderboard-row:last-child{border-bottom:none;}
+  .leaderboard-rank{font-family:var(--mono); color:var(--text-faint); width:24px; display:inline-block;}
+  .leaderboard-pts{font-family:var(--mono); color:var(--amber); font-weight:600;}
+
+  .solved-badge{
+    font-family:var(--mono); font-size:11px; padding:4px 10px; border-radius:5px;
+    background:rgba(76,175,125,.12); color:var(--green); border:1px solid var(--green);
+  }
+
+  /* ===== Audit chain - the signature element ===== */
+  .chain-status{
+    display:flex; align-items:center; gap:14px; padding:16px 18px; border-radius:8px; margin-bottom:22px;
+    border:1px solid var(--border);
+  }
+  .chain-status.intact{border-color:var(--green); background:rgba(76,175,125,.06);}
+  .chain-status.broken{border-color:var(--red); background:rgba(232,96,76,.06);}
+  .chain-dot{width:10px; height:10px; border-radius:50%; flex-shrink:0;}
+  .chain-status.intact .chain-dot{background:var(--green); box-shadow:0 0 8px var(--green);}
+  .chain-status.broken .chain-dot{background:var(--red); box-shadow:0 0 8px var(--red);}
+  .chain-status-text .title{font-family:var(--mono); font-weight:600; font-size:14px;}
+  .chain-status.intact .title{color:var(--green);}
+  .chain-status.broken .title{color:var(--red);}
+  .chain-status-text .sub{font-size:12.5px; color:var(--text-dim); margin-top:2px;}
+
+  .chain{position:relative; padding-left:26px;}
+
+  /* ===== Case timeline (friendlier cousin of the audit chain) ===== */
+  .timeline{position:relative; padding-left:22px;}
+  .timeline::before{
+    content:''; position:absolute; left:7px; top:6px; bottom:6px; width:2px; background:var(--border);
+  }
+  .tl-item{position:relative; margin-bottom:14px;}
+  .tl-item::before{
+    content:''; position:absolute; left:-22px; top:3px; width:8px; height:8px; border-radius:50%;
+    background:var(--amber); z-index:1;
+  }
+  .tl-action{font-family:var(--mono); font-size:12px; font-weight:600; color:var(--text);}
+  .tl-meta{font-size:11.5px; color:var(--text-faint); margin-top:2px;}
+  .tl-details{font-size:12px; color:var(--text-dim); margin-top:3px;}
+  .chain::before{
+    content:''; position:absolute; left:9px; top:8px; bottom:8px; width:2px; background:var(--border);
+  }
+  .link{position:relative; margin-bottom:6px;}
+  .link::before{
+    content:''; position:absolute; left:-26px; top:14px; width:9px; height:9px; border-radius:50%;
+    background:var(--panel); border:2px solid var(--amber-dim); z-index:1;
+  }
+  .link.broken-link::before{border-color:var(--red); background:var(--red);}
+  .link-card{
+    background:var(--panel-2); border:1px solid var(--border); border-radius:6px; padding:11px 14px;
+  }
+  .link-card.broken{border-color:var(--red);}
+  .link-top{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+  .link-seq{font-family:var(--mono); color:var(--text-faint); font-size:11px;}
+  .link-action{font-family:var(--mono); font-size:12.5px; font-weight:600; color:var(--amber);}
+  .link-actor{font-size:12px; color:var(--text-dim);}
+  .link-details{font-size:12.5px; color:var(--text-dim); margin-top:6px;}
+  .link-hashes{
+    font-family:var(--mono); font-size:10px; color:var(--text-faint); margin-top:8px;
+    display:flex; gap:16px; flex-wrap:wrap;
+  }
+  .link-hashes span b{color:var(--text-dim); font-weight:500;}
+
+  .empty{
+    text-align:center; padding:40px 20px; color:var(--text-faint); font-size:13.5px;
+  }
+  .spinner{
+    display:inline-block; width:14px; height:14px; border:2px solid var(--border);
+    border-top-color:var(--amber); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ===== Dashboard stats ===== */
+  .stats-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:14px;}
+  .stat-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:18px;
+  }
+  .stat-value{font-family:var(--mono); font-size:26px; font-weight:700; color:var(--amber);}
+  .stat-value.green{color:var(--green);}
+  .stat-value.red{color:var(--red);}
+  .stat-value.dim{color:var(--text);}
+  .stat-label{font-size:12px; color:var(--text-dim); margin-top:4px; font-family:var(--mono); text-transform:uppercase; letter-spacing:.04em;}
+  .stat-caption{font-size:10.5px; color:var(--text-faint); margin-top:6px; line-height:1.4;}
+
+  /* ===== How it works ===== */
+  .how-it-works{display:flex; flex-direction:column; gap:14px;}
+  .hiw-step{display:flex; gap:12px; align-items:flex-start;}
+  .hiw-num{
+    width:22px; height:22px; border-radius:50%; background:var(--panel-2); border:1px solid var(--amber-dim);
+    color:var(--amber); font-family:var(--mono); font-size:11px; font-weight:700; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; margin-top:1px;
+  }
+  .hiw-txt b{display:block; font-size:13px; color:var(--text); margin-bottom:2px;}
+  .hiw-txt span{font-size:12px; color:var(--text-dim); line-height:1.5;}
+
+  /* ===== Toasts ===== */
+  #toastContainer{
+    position:fixed; top:16px; right:16px; z-index:999; display:flex; flex-direction:column; gap:8px;
+    max-width:340px;
+  }
+  .toast{
+    background:var(--panel-2); border:1px solid var(--border); border-radius:7px; padding:12px 14px;
+    font-size:13px; box-shadow:0 6px 20px rgba(0,0,0,.4); animation:toastIn .2s ease-out;
+  }
+  .toast.ok{border-color:var(--green); color:var(--green);}
+  .toast.err{border-color:var(--red); color:var(--red);}
+  .toast.info{border-color:var(--amber-dim); color:var(--text);}
+  @keyframes toastIn{from{opacity:0; transform:translateX(20px);} to{opacity:1; transform:translateX(0);}}
+
+  /* ===== Responsive ===== */
+  @media (max-width: 900px){
+    #app.active{
+      grid-template-columns:1fr;
+      grid-template-rows:56px auto 1fr;
+    }
+    nav.sidebar{
+      border-right:none; border-bottom:1px solid var(--border);
+      display:flex; gap:6px; overflow-x:auto; padding:10px 14px; white-space:nowrap;
+      -webkit-overflow-scrolling:touch;
+    }
+    nav.sidebar h3{display:none;}
+    .nav-item{width:auto; flex-shrink:0; margin-bottom:0;}
+    main.content{padding:18px 16px;}
+    .grid-2{grid-template-columns:1fr; gap:0;}
+    header.topbar{padding:0 14px;}
+    .who span:not(.role-badge){display:none;}
+    h1.page-title{font-size:18px;}
+  }
+  @media (max-width: 480px){
+    .auth-card{width:100%; max-width:360px; padding:24px 20px; margin:0 16px;}
+    .evidence-tag{flex-direction:column; gap:8px;}
+    .evidence-tag .stub{width:100%; height:4px;}
+    .evidence-actions{flex-wrap:wrap;}
+    .evidence-actions button{flex:1; min-width:110px;}
+    .link-top{flex-direction:column; align-items:flex-start; gap:2px;}
+    .link-hashes{gap:8px;}
+    button.btn, input, select, textarea{font-size:16px;} /* prevents iOS auto-zoom on focus */
+    #toastContainer{left:12px; right:12px; max-width:none;}
+    .status-tabs{overflow-x:auto; -webkit-overflow-scrolling:touch; flex-wrap:nowrap;}
+    .status-tab{flex-shrink:0;}
+    .note-form{flex-direction:column;}
+    .note-form button{width:100%;}
+    #view-case-detail > div{flex-direction:column; align-items:stretch !important;}
+    #statusSelect, #downloadReportBtn{width:100%;}
+    .auth-shell{flex-direction:column; max-height:none; margin:20px 0; border-radius:0;}
+    .auth-hero{border-right:none; border-bottom:1px solid var(--border); padding:32px 24px;}
+    .auth-hero h2{font-size:13.5px; margin-bottom:20px;}
+    .auth-form-side{width:100%; padding:32px 24px;}
+    .challenge-grid{grid-template-columns:1fr;}
+  }
+  @media (max-width: 900px) and (min-width:481px){
+    .auth-card{width:88vw; max-width:380px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="toastContainer"></div>
+
+<!-- ===== Auth screen ===== -->
+<div id="auth">
+  <div class="auth-shell">
+    <div class="auth-hero">
+      <div class="auth-hero-brand"><span class="tag">EV</span> Evidence Vault</div>
+      <h2>A chain-of-custody system for digital evidence — every file is fingerprinted and encrypted the moment it's uploaded, and every action anyone takes is written to a tamper-evident log that proves whether anything was ever altered.</h2>
+
+      <div class="auth-hero-feature">
+        <div class="icon">🔒</div>
+        <div class="txt"><b>Encrypted at rest</b><span>Files are AES-256 encrypted before they ever touch disk. Only the app can decrypt them — never stored as plain files.</span></div>
+      </div>
+      <div class="auth-hero-feature">
+        <div class="icon">#</div>
+        <div class="txt"><b>SHA-256 fingerprinted</b><span>Every upload is hashed on arrival. Verify integrity anytime to prove a file is still byte-for-byte identical to what was uploaded.</span></div>
+      </div>
+      <div class="auth-hero-feature">
+        <div class="icon">⛓</div>
+        <div class="txt"><b>Tamper-evident audit log</b><span>Every action is chained to the one before it, like a mini blockchain. Edit any past record and the break is instantly detectable.</span></div>
+      </div>
+      <div class="auth-hero-feature">
+        <div class="icon">🔍</div>
+        <div class="txt"><b>Built-in forensic tools</b><span>Detect disguised file types, view hex dumps, and extract readable strings — all without leaving the browser.</span></div>
+      </div>
+    </div>
+
+    <div class="auth-form-side">
+  <div class="auth-card">
+    <div class="auth-sub" style="font-size:14px; color:var(--text); font-weight:600; margin-bottom:20px;">Access your account</div>
+
+    <div class="auth-tabs">
+      <div class="auth-tab active" data-tab="login">Log in</div>
+      <div class="auth-tab" data-tab="register">Register</div>
+    </div>
+
+    <div id="authMsg"></div>
+
+    <form class="auth-form active" id="loginForm" data-form="login">
+      <label>Username</label>
+      <input type="text" id="loginUsername" required autocomplete="username">
+      <label>Password</label>
+      <input type="password" id="loginPassword" required autocomplete="current-password">
+      <div id="mfaCodeWrap" style="display:none;">
+        <label>Authenticator code</label>
+        <input type="text" id="loginTotpCode" inputmode="numeric" pattern="\d{6}" maxlength="6" placeholder="6-digit code" autocomplete="one-time-code">
+      </div>
+      <button type="submit" class="btn" style="width:100%">Log in</button>
+    </form>
+
+    <form class="auth-form" id="registerForm" data-form="register">
+      <label>Username</label>
+      <input type="text" id="regUsername" required pattern="[a-zA-Z0-9_.\-]{3,50}" title="Letters, numbers, underscore, dot, or hyphen (3-50 chars)">
+      <label>Email</label>
+      <input type="email" id="regEmail" required>
+      <label>Password</label>
+      <input type="password" id="regPassword" required minlength="8">
+      <p style="font-size:11.5px; color:var(--text-faint); margin:-8px 0 14px; line-height:1.5;">New accounts are created as Investigators. An existing Admin can promote your account afterward from Settings.</p>
+      <button type="submit" class="btn" style="width:100%">Create account</button>
+    </form>
+  </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Main app ===== -->
+<div id="app">
+  <header class="topbar">
+    <div class="brand"><span class="tag">EV</span> Evidence Vault</div>
+    <div class="who">
+      <button class="theme-toggle" id="themeToggle" title="Toggle light/dark theme">◐</button>
+      <div class="profile-menu-wrap">
+        <button class="profile-trigger" id="profileTrigger">
+          <span class="avatar" id="avatarInitial">?</span>
+          <span id="whoUsername"></span>
+          <span class="role-badge" id="whoRole"></span>
+        </button>
+        <div class="profile-dropdown" id="profileDropdown">
+          <button class="dropdown-item" data-view="settings">Settings</button>
+          <button class="dropdown-item" id="logoutBtn">Log out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <h3>Workspace</h3>
+    <button class="nav-item active" data-view="dashboard">Dashboard</button>
+    <button class="nav-item" data-view="cases">Cases</button>
+    <button class="nav-item" data-view="search">Search Evidence</button>
+    <button class="nav-item" data-view="challenges">Challenges</button>
+    <button class="nav-item" id="navAudit" data-view="audit" style="display:none">Audit Chain</button>
+  </nav>
+
+  <main class="content">
+
+    <!-- Dashboard view -->
+    <section class="view active" id="view-dashboard">
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-sub">Live overview of your evidence vault.</p>
+      <div class="stats-grid" id="statsGrid">
+        <div class="empty">Loading stats…</div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:14px; font-weight:600; display:block;">How this works</label>
+        <div class="how-it-works">
+          <div class="hiw-step">
+            <div class="hiw-num">1</div>
+            <div class="hiw-txt"><b>Upload</b><span>You upload a file to a case. It never leaves the server as plain data — it's read once, into memory only.</span></div>
+          </div>
+          <div class="hiw-step">
+            <div class="hiw-num">2</div>
+            <div class="hiw-txt"><b>Fingerprint & encrypt</b><span>The server computes a SHA-256 hash of the exact bytes, then encrypts them with AES-256-GCM before anything touches disk.</span></div>
+          </div>
+          <div class="hiw-step">
+            <div class="hiw-num">3</div>
+            <div class="hiw-txt"><b>Store</b><span>The encrypted file is saved on the server's disk. The hash, filename, and metadata are saved as a row in the database — never the plaintext.</span></div>
+          </div>
+          <div class="hiw-step">
+            <div class="hiw-num">4</div>
+            <div class="hiw-txt"><b>Log</b><span>The action is appended to the audit chain — a new database row whose hash depends on the previous entry's hash, making silent edits detectable.</span></div>
+          </div>
+        </div>
+        <p style="font-size:11.5px; color:var(--text-faint); margin-top:14px; line-height:1.5;">
+          All of this runs on this server, backed by a real SQL database (H2 locally, or Postgres in production) — nothing is mocked or simulated.
+        </p>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:12px; font-weight:600; display:block;">Recent activity</label>
+        <div id="recentActivity"><div class="empty">Loading…</div></div>
+      </div>
+    </section>
+
+    <!-- Global evidence search view -->
+    <section class="view" id="view-search">
+      <h1 class="page-title">Search evidence</h1>
+      <p class="page-sub">Search by filename or SHA-256 hash across every case.</p>
+      <input type="text" id="globalSearchInput" placeholder="Filename or hash…" style="margin-bottom:16px;">
+      <div class="card" id="searchResultsCard">
+        <div class="empty">Type to search.</div>
+      </div>
+    </section>
+
+    <!-- Cases view -->
+    <section class="view" id="view-cases">
+      <h1 class="page-title">Cases</h1>
+      <p class="page-sub">Open a case to manage its evidence, or start a new one.</p>
+
+      <input type="text" id="caseSearch" placeholder="Search cases by number or title…" style="margin-bottom:12px;">
+
+      <div class="status-tabs" id="statusTabs">
+        <button class="status-tab active" data-status="ALL">All</button>
+        <button class="status-tab" data-status="OPEN">Open</button>
+        <button class="status-tab" data-status="CLOSED">Closed</button>
+        <button class="status-tab" data-status="ARCHIVED">Archived</button>
+      </div>
+
+      <div class="card" id="caseListCard">
+        <div id="caseList"><div class="empty">Loading cases…</div></div>
+      </div>
+
+      <div class="card">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:12px; font-weight:600;">New case</label>
+        <div id="createCaseMsg"></div>
+        <form id="createCaseForm">
+          <div class="grid-2">
+            <div>
+              <label>Case number</label>
+              <input type="text" id="caseNumber" placeholder="CASE-2026-003" required>
+            </div>
+            <div>
+              <label>Title</label>
+              <input type="text" id="caseTitle" placeholder="Short case title" required>
+            </div>
+          </div>
+          <label>Description</label>
+          <textarea id="caseDescription" placeholder="What is this case about?"></textarea>
+          <button type="submit" class="btn">Create case</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Case detail view -->
+    <section class="view" id="view-case-detail">
+      <button class="linklike" id="backToCases" style="margin-bottom:14px;">&larr; all cases</button>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+        <div>
+          <h1 class="page-title" id="caseDetailTitle">—</h1>
+          <p class="page-sub" id="caseDetailSub">—</p>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
+          <select id="statusSelect" style="width:auto; margin-bottom:0;">
+            <option value="OPEN">Open</option>
+            <option value="CLOSED">Closed</option>
+            <option value="ARCHIVED">Archived</option>
+          </select>
+          <button class="btn ghost" id="downloadReportBtn">Download report (PDF)</button>
+          <button class="btn ghost" id="toggleTimelineBtn">Timeline</button>
+        </div>
+      </div>
+
+      <div class="card" id="timelineCard" style="display:none;">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:12px; font-weight:600; display:block;">Case timeline</label>
+        <div class="timeline" id="timelineList"><div class="empty">Loading…</div></div>
+      </div>
+
+      <div class="card">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:12px; font-weight:600; display:block;">Assigned investigators</label>
+        <p style="font-size:11.5px; color:var(--text-faint); margin:-6px 0 12px; line-height:1.5;">Only the case creator, assigned investigators, and admins can view or act on this case's evidence.</p>
+        <div id="assignedInvestigatorsList" style="margin-bottom:12px;"></div>
+        <div id="assignMsg"></div>
+        <form id="assignInvestigatorForm" style="display:flex; gap:8px;">
+          <input type="text" id="assignUsername" placeholder="username to add" style="margin-bottom:0; flex:1;" required>
+          <button type="submit" class="btn ghost">Grant access</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:12px; font-weight:600;">Upload evidence</label>
+        <div id="uploadMsg"></div>
+        <form id="uploadForm">
+          <input type="file" id="evidenceFile" required style="margin-bottom:12px;">
+          <button type="submit" class="btn" id="uploadBtn">Upload &amp; encrypt</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:12px; font-weight:600;">Evidence files</label>
+        <div id="evidenceList"><div class="empty">No evidence uploaded yet.</div></div>
+      </div>
+    </section>
+
+    <!-- Challenges list view -->
+    <section class="view" id="view-challenges">
+      <h1 class="page-title">Forensics Challenges</h1>
+      <p class="page-sub">Practice puzzles using the same tools you use on real evidence — hex dump, strings, file-type detection, and hash-chain reasoning.</p>
+
+      <div class="progress-bar-card" id="myProgressCard"><div class="empty">Loading progress…</div></div>
+
+      <div id="challengeList" style="margin-top:16px;"><div class="empty">Loading challenges…</div></div>
+
+      <div class="card" style="margin-top:22px;">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:12px; font-weight:600; display:block;">Leaderboard</label>
+        <div id="leaderboardList"><div class="empty">Loading…</div></div>
+      </div>
+    </section>
+
+    <!-- Challenge detail view -->
+    <section class="view" id="view-challenge-detail">
+      <button class="linklike" id="backToChallenges" style="margin-bottom:14px;">&larr; all challenges</button>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h1 class="page-title" id="challengeTitle">—</h1>
+          <p class="page-sub" id="challengeMeta">—</p>
+        </div>
+        <div id="challengeSolvedBadge"></div>
+      </div>
+
+      <div class="card">
+        <p id="challengeDescription" style="white-space:pre-wrap; font-size:13.5px; line-height:1.6; color:var(--text-dim); margin:0;"></p>
+      </div>
+
+      <div class="card" id="challengeArtifactCard" style="display:none;">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:12px; font-weight:600; display:block;">Artifact</label>
+        <div class="evidence-actions">
+          <button class="btn ghost" id="downloadArtifactBtn">Download file</button>
+          <button class="btn ghost" id="challengeFileTypeBtn">Detect file type</button>
+          <button class="btn ghost" id="challengeHexdumpBtn">Hex dump</button>
+          <button class="btn ghost" id="challengeStringsBtn">Extract strings</button>
+        </div>
+        <div class="analysis-panel" id="challengeAnalysisPanel" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:12px; font-weight:600; display:block;">Submit flag</label>
+        <div id="submitMsg"></div>
+        <form id="submitFlagForm" style="display:flex; gap:8px;">
+          <input type="text" id="flagInput" placeholder="FLAG{...}" style="margin-bottom:0; flex:1;" required>
+          <button type="submit" class="btn">Submit</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Settings view -->
+    <section class="view" id="view-settings">
+      <h1 class="page-title">Settings</h1>
+      <p class="page-sub">Your account and preferences.</p>
+
+      <div class="card">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:12px; font-weight:600; display:block;">Account</label>
+        <div id="settingsAccount"><div class="empty">Loading…</div></div>
+      </div>
+
+      <div class="card">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:12px; font-weight:600; display:block;">Appearance</label>
+        <div class="settings-row">
+          <span class="k">Theme</span>
+          <span>
+            <button class="btn ghost" id="settingsThemeLight" style="padding:5px 12px; font-size:12px;">Light</button>
+            <button class="btn ghost" id="settingsThemeDark" style="padding:5px 12px; font-size:12px;">Dark</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="card">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:12px; font-weight:600; display:block;">Change password</label>
+        <div id="changePasswordMsg"></div>
+        <form id="changePasswordForm">
+          <label>Current password</label>
+          <input type="password" id="currentPassword" required>
+          <label>New password</label>
+          <input type="password" id="newPassword" required minlength="8">
+          <button type="submit" class="btn">Update password</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:6px; font-weight:600; display:block;">Two-factor authentication</label>
+        <p style="font-size:11.5px; color:var(--text-faint); margin:0 0 14px; line-height:1.5;">Adds a 6-digit authenticator code (Google Authenticator, Authy, etc.) on top of your password. Strongly recommended for Admin accounts, since Admin is the only role that can view the audit chain.</p>
+        <div id="mfaMsg"></div>
+        <div id="mfaStatus"><div class="empty">Loading…</div></div>
+      </div>
+
+      <div class="card" id="adminToolsCard" style="display:none;">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:6px; font-weight:600; display:block;">Admin: promote a user</label>
+        <p style="font-size:11.5px; color:var(--text-faint); margin:0 0 14px; line-height:1.5;">Grants ADMIN to an existing Investigator account. This is the only way to create new admins.</p>
+        <div id="promoteMsg"></div>
+        <form id="promoteForm">
+          <label>Username to promote</label>
+          <input type="text" id="promoteUsername" required>
+          <button type="submit" class="btn">Promote to Admin</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Audit chain view (admin only) -->
+    <section class="view" id="view-audit">
+      <h1 class="page-title">Audit chain</h1>
+      <p class="page-sub">Every action is hash-linked to the one before it. Tampering with any past entry breaks every hash after it.</p>
+
+      <div id="chainStatus"></div>
+
+      <div style="margin-bottom:18px; display:flex; gap:10px;">
+        <button class="btn ghost" id="verifyChainBtn">Verify chain integrity</button>
+        <button class="btn ghost" id="exportChainBtn">Export chain as JSON</button>
+      </div>
+
+      <div class="chain" id="chainList"><div class="empty">Loading audit log…</div></div>
+
+      <div class="card" style="margin-top:24px;">
+        <label style="font-family:var(--sans); font-size:13px; color:var(--text); margin-bottom:6px; font-weight:600; display:block;">Anomaly detection</label>
+        <p style="font-size:11.5px; color:var(--text-faint); margin:0 0 14px; line-height:1.5;">Rule-based heuristics, not machine learning — flags off-hours downloads and rapid repeated access to the same file.</p>
+        <div id="anomalyList"><div class="empty">Loading…</div></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+const API = window.location.origin;
+let TOKEN = sessionStorage.getItem('ev_token') || null;
+let ROLE = sessionStorage.getItem('ev_role') || null;
+let USERNAME = sessionStorage.getItem('ev_username') || null;
+let currentCase = null;
+
+// ---------- helpers ----------
+function authHeaders(){ return { 'Authorization': 'Bearer ' + TOKEN }; }
+
+async function api(path, opts={}){
+  const res = await fetch(API + path, {
+    ...opts,
+    headers: { ...(opts.headers||{}), ...authHeaders() }
+  });
+  if(!res.ok){
+    let body;
+    try{ body = await res.json(); }catch(e){ body = { message: res.statusText }; }
+    const err = new Error(body.message || 'Request failed');
+    err.errorCode = body.error; // e.g. "MFA_REQUIRED", "TOO_MANY_REQUESTS" - callers can branch on this
+    err.status = res.status;
+    throw err;
+  }
+  const ct = res.headers.get('content-type') || '';
+  if(ct.includes('application/json')) return res.json();
+  return res.blob();
+}
+
+function showMsg(el, text, type){
+  el.innerHTML = `<div class="msg ${type}">${text}</div>`;
+}
+function clearMsg(el){ el.innerHTML = ''; }
+
+function toast(text, type='info'){
+  const container = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = text;
+  container.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(), 300); }, 4000);
+}
+
+function fmtDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, { dateStyle:'medium', timeStyle:'short' });
+}
+function fmtBytes(bytes){
+  if (bytes === 0) return '0 B';
+  const units = ['B','KB','MB','GB','TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+function shortHash(h){
+  if(!h) return '—';
+  return h.slice(0,10) + '…' + h.slice(-8);
+}
+
+// ---------- auth screen ----------
+document.querySelectorAll('.auth-tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.auth-form').forEach(f=>f.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelector(`[data-form="${tab.dataset.tab}"]`).classList.add('active');
+    clearMsg(document.getElementById('authMsg'));
+  });
+});
+
+document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const msgEl = document.getElementById('authMsg');
+  clearMsg(msgEl);
+  try{
+    const res = await api('/api/auth/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        username: document.getElementById('loginUsername').value,
+        password: document.getElementById('loginPassword').value,
+        totpCode: document.getElementById('loginTotpCode').value || null
+      })
+    });
+    setSession(res.token, res.username, res.role);
+    enterApp();
+  }catch(err){
+    // MFA_REQUIRED isn't a failure - it means the password was correct and we just need
+    // to reveal the authenticator-code field and ask the user to submit again.
+    if (err.errorCode === 'MFA_REQUIRED') {
+      document.getElementById('mfaCodeWrap').style.display = 'block';
+      document.getElementById('loginTotpCode').focus();
+      showMsg(msgEl, err.message, 'info');
+    } else {
+      showMsg(msgEl, err.message, 'err');
+    }
+  }
+});
+
+document.getElementById('registerForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const msgEl = document.getElementById('authMsg');
+  clearMsg(msgEl);
+  try{
+    const res = await api('/api/auth/register', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        username: document.getElementById('regUsername').value,
+        email: document.getElementById('regEmail').value,
+        password: document.getElementById('regPassword').value
+      })
+    });
+    setSession(res.token, res.username, res.role);
+    enterApp();
+  }catch(err){
+    showMsg(msgEl, err.message, 'err');
+  }
+});
+
+function setSession(token, username, role){
+  TOKEN = token; USERNAME = username; ROLE = role;
+  sessionStorage.setItem('ev_token', token);
+  sessionStorage.setItem('ev_username', username);
+  sessionStorage.setItem('ev_role', role);
+}
+
+document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+  // Revoke the token server-side (not just forgetting it client-side) so it can't be replayed
+  // even if it leaked somehow before its natural expiry.
+  try {
+    await api('/api/auth/logout', { method:'POST' });
+  } catch(err) {
+    // Even if revocation fails (e.g. network hiccup), still clear the local session below -
+    // the user's intent to log out of THIS browser should always succeed.
+  }
+  sessionStorage.clear();
+  TOKEN = null; ROLE = null; USERNAME = null;
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('auth').style.display = 'flex';
+});
+
+function enterApp(){
+  document.getElementById('auth').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  document.getElementById('whoUsername').textContent = USERNAME;
+  document.getElementById('whoRole').textContent = ROLE;
+  document.getElementById('avatarInitial').textContent = USERNAME.charAt(0).toUpperCase();
+  document.getElementById('navAudit').style.display = ROLE === 'ADMIN' ? 'block' : 'none';
+  loadDashboard();
+}
+
+// ---------- theme ----------
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('ev_theme', theme);
+  document.getElementById('themeToggle').textContent = theme === 'light' ? '◑' : '◐';
+}
+(function initTheme(){
+  const saved = localStorage.getItem('ev_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  setTheme(current === 'light' ? 'dark' : 'light');
+});
+document.getElementById('settingsThemeLight').addEventListener('click', ()=> setTheme('light'));
+document.getElementById('settingsThemeDark').addEventListener('click', ()=> setTheme('dark'));
+
+// ---------- profile dropdown ----------
+document.getElementById('profileTrigger').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  document.getElementById('profileDropdown').classList.toggle('open');
+});
+document.addEventListener('click', (e)=>{
+  const dropdown = document.getElementById('profileDropdown');
+  if(!dropdown.contains(e.target) && e.target.id !== 'profileTrigger'){
+    dropdown.classList.remove('open');
+  }
+});
+document.querySelectorAll('.dropdown-item[data-view]').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    document.getElementById('profileDropdown').classList.remove('open');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-' + item.dataset.view).classList.add('active');
+    document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.remove('active'));
+    if(item.dataset.view === 'settings') loadSettings();
+  });
+});
+
+async function loadSettings(){
+  const el = document.getElementById('settingsAccount');
+  try{
+    const me = await api('/api/auth/me');
+    el.innerHTML = `
+      <div class="settings-row"><span class="k">Username</span><span class="v">${escapeHtml(me.username)}</span></div>
+      <div class="settings-row"><span class="k">Email</span><span class="v">${escapeHtml(me.email)}</span></div>
+      <div class="settings-row"><span class="k">Role</span><span class="v">${me.role}</span></div>
+      <div class="settings-row"><span class="k">Member since</span><span class="v">${fmtDate(me.createdAt)}</span></div>
+      <div class="settings-row"><span class="k">Storage used</span><span class="v">${fmtBytes(me.storageUsedBytes)} of ${fmtBytes(me.storageQuotaBytes)}</span></div>
+    `;
+    document.getElementById('adminToolsCard').style.display = me.role === 'ADMIN' ? 'block' : 'none';
+  }catch(err){
+    el.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+  loadMfaStatus();
+}
+
+async function loadMfaStatus(){
+  const el = document.getElementById('mfaStatus');
+  // /api/auth/me doesn't currently return totpEnabled, so we infer state from whether the
+  // user has already started setup this session; default view offers to enable it.
+  el.innerHTML = `
+    <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px;">
+      If you haven't set this up yet, click below to generate a secret and scan it into your authenticator app.
+    </p>
+    <button class="btn ghost" id="mfaSetupBtn" style="margin-bottom:12px;">Set up two-factor authentication</button>
+    <div id="mfaSetupPanel" style="display:none;">
+      <div class="settings-row"><span class="k">Manual entry key</span></div>
+      <div style="font-family:var(--mono); font-size:12px; background:var(--panel-2); padding:8px 10px; border-radius:6px; word-break:break-all; margin-bottom:12px;" id="mfaSecretText"></div>
+      <p style="font-size:11.5px; color:var(--text-faint); margin:0 0 10px;">Enter this key into your authenticator app (or scan the otpauth:// URI below with a QR generator of your choice), then enter the 6-digit code it produces to confirm.</p>
+      <label>6-digit code</label>
+      <input type="text" id="mfaConfirmCode" inputmode="numeric" pattern="\\d{6}" maxlength="6" placeholder="123456">
+      <button class="btn" id="mfaConfirmBtn" style="margin-top:10px;">Confirm and enable</button>
+    </div>
+  `;
+  document.getElementById('mfaSetupBtn').addEventListener('click', async ()=>{
+    const msgEl = document.getElementById('mfaMsg');
+    clearMsg(msgEl);
+    try{
+      const res = await api('/api/auth/mfa/setup', { method:'POST' });
+      document.getElementById('mfaSecretText').textContent = res.secretBase32;
+      document.getElementById('mfaSetupPanel').style.display = 'block';
+    }catch(err){
+      showMsg(msgEl, err.message, 'err');
+    }
+  });
+  document.getElementById('mfaConfirmBtn').addEventListener('click', async ()=>{
+    const msgEl = document.getElementById('mfaMsg');
+    clearMsg(msgEl);
+    try{
+      await api('/api/auth/mfa/confirm', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ code: document.getElementById('mfaConfirmCode').value })
+      });
+      showMsg(msgEl, 'Two-factor authentication enabled. You will need a code on your next login.', 'ok');
+      document.getElementById('mfaSetupPanel').style.display = 'none';
+    }catch(err){
+      showMsg(msgEl, err.message, 'err');
+    }
+  });
+}
+
+const promoteFormEl = document.getElementById('promoteForm');
+if (promoteFormEl) {
+  promoteFormEl.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const msgEl = document.getElementById('promoteMsg');
+    clearMsg(msgEl);
+    try{
+      const res = await api('/api/auth/users/promote', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ username: document.getElementById('promoteUsername').value })
+      });
+      showMsg(msgEl, `${res.username} is now an ADMIN.`, 'ok');
+      document.getElementById('promoteForm').reset();
+    }catch(err){
+      showMsg(msgEl, err.message, 'err');
+    }
+  });
+}
+
+document.getElementById('changePasswordForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const msgEl = document.getElementById('changePasswordMsg');
+  clearMsg(msgEl);
+  try{
+    await api('/api/auth/change-password', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        currentPassword: document.getElementById('currentPassword').value,
+        newPassword: document.getElementById('newPassword').value
+      })
+    });
+    showMsg(msgEl, 'Password updated.', 'ok');
+    toast('Password updated', 'ok');
+    e.target.reset();
+  }catch(err){
+    showMsg(msgEl, err.message, 'err');
+  }
+});
+
+// ---------- nav ----------
+document.querySelectorAll('.nav-item[data-view]').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchView(btn.dataset.view));
+});
+function switchView(name){
+  document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  if(name === 'audit') loadAuditChain();
+  if(name === 'dashboard') loadDashboard();
+  if(name === 'cases') loadCases();
+  if(name === 'challenges') loadChallenges();
+}
+
+// ---------- Challenges ----------
+let currentChallenge = null;
+
+async function loadChallenges(){
+  await loadMyProgress();
+  const listEl = document.getElementById('challengeList');
+  try{
+    const challenges = await api('/api/challenges');
+    if(challenges.length === 0){
+      listEl.innerHTML = '<div class="empty">No challenges available yet.</div>';
+    } else {
+      listEl.innerHTML = `<div class="challenge-grid">${challenges.map(c => `
+        <div class="challenge-card ${c.solvedByMe ? 'solved':''}" data-id="${c.id}">
+          <div class="challenge-top">
+            <div class="challenge-card-title">${escapeHtml(c.title)}</div>
+            <span class="diff-badge ${c.difficulty.toLowerCase()}">${c.difficulty}</span>
+          </div>
+          <div class="challenge-card-meta">
+            <span>${c.category.replace('_',' ')}</span>
+            <span class="challenge-card-pts">${c.points} pts</span>
+          </div>
+        </div>
+      `).join('')}</div>`;
+      listEl.querySelectorAll('.challenge-card').forEach(card=>{
+        card.addEventListener('click', ()=> openChallenge(card.dataset.id));
+      });
+    }
+  }catch(err){
+    listEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+  loadLeaderboard();
+}
+
+async function loadMyProgress(){
+  const el = document.getElementById('myProgressCard');
+  try{
+    const p = await api('/api/challenges/my-progress');
+    const pct = p.totalChallenges === 0 ? 0 : Math.round((p.challengesSolved / p.totalChallenges) * 100);
+    el.innerHTML = `
+      <div class="progress-top">
+        <span class="lbl">Your progress</span>
+        <span class="pts">${p.totalPoints} pts</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div style="font-size:11.5px; color:var(--text-faint); margin-top:6px;">${p.challengesSolved} of ${p.totalChallenges} challenges solved</div>
+    `;
+  }catch(err){
+    el.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+}
+
+async function loadLeaderboard(){
+  const el = document.getElementById('leaderboardList');
+  try{
+    const entries = await api('/api/challenges/leaderboard');
+    if(entries.length === 0){
+      el.innerHTML = '<div class="empty">No one has solved a challenge yet - be the first.</div>';
+      return;
+    }
+    el.innerHTML = entries.map((e, i) => `
+      <div class="leaderboard-row">
+        <span><span class="leaderboard-rank">#${i+1}</span>${escapeHtml(e.username)}</span>
+        <span><span class="leaderboard-pts">${e.totalPoints} pts</span> <span style="color:var(--text-faint); font-size:11px; margin-left:6px;">(${e.challengesSolved} solved)</span></span>
+      </div>
+    `).join('');
+  }catch(err){
+    el.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+}
+
+async function openChallenge(id){
+  try{
+    currentChallenge = await api(`/api/challenges/${id}`);
+    document.getElementById('challengeTitle').textContent = currentChallenge.title;
+    document.getElementById('challengeMeta').textContent =
+      `${currentChallenge.category.replace('_',' ')} · ${currentChallenge.difficulty} · ${currentChallenge.points} points`;
+    document.getElementById('challengeDescription').textContent = currentChallenge.description;
+    document.getElementById('challengeSolvedBadge').innerHTML =
+      currentChallenge.solvedByMe ? '<span class="solved-badge">✓ SOLVED</span>' : '';
+    document.getElementById('challengeArtifactCard').style.display = currentChallenge.hasArtifact ? 'block' : 'none';
+    document.getElementById('challengeAnalysisPanel').style.display = 'none';
+    document.getElementById('flagInput').value = '';
+    clearMsg(document.getElementById('submitMsg'));
+
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-challenge-detail').classList.add('active');
+  }catch(err){
+    toast(err.message, 'err');
+  }
+}
+
+document.getElementById('backToChallenges').addEventListener('click', ()=>{
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-challenges').classList.add('active');
+  document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view==='challenges'));
+});
+
+document.getElementById('downloadArtifactBtn').addEventListener('click', async ()=>{
+  try{
+    const blob = await api(`/api/challenges/${currentChallenge.id}/artifact`);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = currentChallenge.artifactFilename || 'artifact.bin';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }catch(err){
+    toast('Download failed: ' + err.message, 'err');
+  }
+});
+
+function showChallengeAnalysis(html){
+  const panel = document.getElementById('challengeAnalysisPanel');
+  panel.style.display = 'block';
+  panel.innerHTML = html;
+}
+
+document.getElementById('challengeFileTypeBtn').addEventListener('click', async ()=>{
+  showChallengeAnalysis('<div class="empty" style="padding:6px 0;"><span class="spinner"></span> Analyzing…</div>');
+  try{
+    const r = await api(`/api/challenges/${currentChallenge.id}/analysis/file-type`);
+    let html = `
+      <div class="analysis-row"><span class="k">Detected type</span><span class="v">${escapeHtml(r.detectedType)}</span></div>
+      <div class="analysis-row"><span class="k">Claimed extension</span><span class="v">.${escapeHtml(r.claimedExtension || '—')}</span></div>
+      <div class="analysis-row"><span class="k">Signature bytes</span><span class="v">${escapeHtml(r.signatureHex || '—')}</span></div>
+    `;
+    if(r.mismatch) html += `<div class="mismatch-warning">⚠ MISMATCH — actual content does not match the claimed extension.</div>`;
+    showChallengeAnalysis(html);
+  }catch(err){
+    showChallengeAnalysis(`<div class="msg err">${err.message}</div>`);
+  }
+});
+
+document.getElementById('challengeHexdumpBtn').addEventListener('click', async ()=>{
+  showChallengeAnalysis('<div class="empty" style="padding:6px 0;"><span class="spinner"></span> Reading bytes…</div>');
+  try{
+    const r = await api(`/api/challenges/${currentChallenge.id}/analysis/hexdump`);
+    showChallengeAnalysis(`
+      <div class="analysis-row"><span class="k">Showing</span><span class="v">${r.bytesShown} of ${r.totalFileSizeBytes} bytes</span></div>
+      <div class="hexdump" style="margin-top:8px;">${r.lines.map(escapeHtml).join('\n')}</div>
+    `);
+  }catch(err){
+    showChallengeAnalysis(`<div class="msg err">${err.message}</div>`);
+  }
+});
+
+document.getElementById('challengeStringsBtn').addEventListener('click', async ()=>{
+  showChallengeAnalysis('<div class="empty" style="padding:6px 0;"><span class="spinner"></span> Extracting…</div>');
+  try{
+    const r = await api(`/api/challenges/${currentChallenge.id}/analysis/strings`);
+    let html = `<div class="analysis-row"><span class="k">Found</span><span class="v">${r.totalFound}</span></div>`;
+    html += r.strings.length === 0
+      ? '<div class="empty" style="padding:8px 0;">No printable strings found.</div>'
+      : `<div class="strings-list" style="margin-top:8px;">${r.strings.map(s => `<div>${escapeHtml(s)}</div>`).join('')}</div>`;
+    showChallengeAnalysis(html);
+  }catch(err){
+    showChallengeAnalysis(`<div class="msg err">${err.message}</div>`);
+  }
+});
+
+document.getElementById('submitFlagForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const msgEl = document.getElementById('submitMsg');
+  const flag = document.getElementById('flagInput').value.trim();
+  if(!flag) return;
+  try{
+    const r = await api(`/api/challenges/${currentChallenge.id}/submit`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ flag })
+    });
+    if(r.correct){
+      showMsg(msgEl, r.message, 'ok');
+      toast(r.message, 'ok');
+      if(!r.alreadySolved){
+        currentChallenge.solvedByMe = true;
+        document.getElementById('challengeSolvedBadge').innerHTML = '<span class="solved-badge">✓ SOLVED</span>';
+        loadMyProgress();
+      }
+    } else {
+      showMsg(msgEl, r.message, 'err');
+      toast(r.message, 'err');
+    }
+  }catch(err){
+    showMsg(msgEl, err.message, 'err');
+  }
+});
+
+let searchDebounce;
+document.getElementById('globalSearchInput').addEventListener('input', (e)=>{
+  clearTimeout(searchDebounce);
+  const q = e.target.value.trim();
+  const resultsCard = document.getElementById('searchResultsCard');
+  if(!q){ resultsCard.innerHTML = '<div class="empty">Type to search.</div>'; return; }
+  resultsCard.innerHTML = '<div class="empty"><span class="spinner"></span> Searching…</div>';
+  searchDebounce = setTimeout(async ()=>{
+    try{
+      const results = await api(`/api/evidence/search?q=${encodeURIComponent(q)}`);
+      if(results.length === 0){
+        resultsCard.innerHTML = '<div class="empty">No matches.</div>';
+        return;
+      }
+      resultsCard.innerHTML = results.map(ev => `
+        <div class="evidence-tag" style="cursor:pointer;" data-case-id="${ev.caseId}" data-case-number="${escapeHtml(ev.caseNumber)}">
+          <div class="stub"></div>
+          <div class="evidence-body">
+            <div class="evidence-name">${escapeHtml(ev.originalFilename)} <span class="case-num" style="margin-left:8px;">${escapeHtml(ev.caseNumber)}</span></div>
+            <div class="evidence-hash">SHA-256 ${ev.sha256Hash}</div>
+            <div class="evidence-hash">uploaded by ${escapeHtml(ev.uploadedBy)} · ${fmtDate(ev.uploadedAt)}</div>
+          </div>
+        </div>
+      `).join('');
+      resultsCard.querySelectorAll('[data-case-id]').forEach(row=>{
+        row.addEventListener('click', async ()=>{
+          const cases = await api('/api/cases');
+          const c = cases.find(cc => cc.id === row.dataset.caseId);
+          if(c){
+            switchView('cases');
+            openCase(c);
+          }
+        });
+      });
+    }catch(err){
+      resultsCard.innerHTML = `<div class="msg err">${err.message}</div>`;
+    }
+  }, 350);
+});
+
+async function loadDashboard(){
+  const grid = document.getElementById('statsGrid');
+  try{
+    const s = await api('/api/dashboard/stats');
+    grid.innerHTML = `
+      <div class="stat-card"><div class="stat-value dim">${s.totalCases}</div><div class="stat-label">Cases</div><div class="stat-caption">Investigations currently tracked</div></div>
+      <div class="stat-card"><div class="stat-value dim">${s.totalEvidence}</div><div class="stat-label">Evidence files</div><div class="stat-caption">Encrypted files stored across all cases</div></div>
+      <div class="stat-card"><div class="stat-value green">${s.verifiedEvidence}</div><div class="stat-label">Verified</div><div class="stat-caption">Hash confirmed to match the original upload</div></div>
+      <div class="stat-card"><div class="stat-value red">${s.failedEvidence}</div><div class="stat-label">Failed checks</div><div class="stat-caption">Recomputed hash did NOT match — investigate</div></div>
+      <div class="stat-card"><div class="stat-value">${s.pendingEvidence}</div><div class="stat-label">Not yet verified</div><div class="stat-caption">Uploaded, but integrity never checked</div></div>
+      <div class="stat-card"><div class="stat-value dim">${s.auditEntries}</div><div class="stat-label">Audit log entries</div><div class="stat-caption">Every action ever taken, hash-chained</div></div>
+    `;
+  }catch(err){
+    grid.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+  loadRecentActivity();
+}
+
+async function loadRecentActivity(){
+  const el = document.getElementById('recentActivity');
+  try{
+    const items = await api('/api/dashboard/recent-activity');
+    if(items.length === 0){
+      el.innerHTML = '<div class="empty">No activity yet.</div>';
+      return;
+    }
+    el.innerHTML = items.map(i => `
+      <div class="note-item" style="margin-bottom:8px;">
+        <b>${i.action}</b> · ${escapeHtml(i.actorUsername)} · ${fmtDate(i.timestamp)}
+        ${i.details ? `<div style="margin-top:3px; color:var(--text-faint);">${escapeHtml(i.details)}</div>` : ''}
+      </div>
+    `).join('');
+  }catch(err){
+    el.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+}
+
+// ---------- cases ----------
+let allCases = [];
+let activeStatusFilter = 'ALL';
+
+async function loadCases(){
+  const listEl = document.getElementById('caseList');
+  try{
+    allCases = await api('/api/cases');
+    applyCaseFilters();
+  }catch(err){
+    listEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+}
+
+function applyCaseFilters(){
+  const q = document.getElementById('caseSearch').value.trim().toLowerCase();
+  let filtered = allCases;
+  if(activeStatusFilter !== 'ALL'){
+    filtered = filtered.filter(c => c.status === activeStatusFilter);
+  }
+  if(q){
+    filtered = filtered.filter(c => c.caseNumber.toLowerCase().includes(q) || c.title.toLowerCase().includes(q));
+  }
+  renderCaseList(filtered);
+}
+
+function renderCaseList(cases){
+  const listEl = document.getElementById('caseList');
+  if(cases.length === 0){
+    listEl.innerHTML = '<div class="empty">No cases match. Try a different search or filter.</div>';
+    return;
+  }
+  listEl.innerHTML = cases.map(c => `
+    <div class="case-row" data-id="${c.id}">
+      <div>
+        <div class="case-num">${escapeHtml(c.caseNumber)}</div>
+        <div class="case-title">${escapeHtml(c.title)}</div>
+      </div>
+      <div class="case-meta">
+        <span class="status-badge ${c.status.toLowerCase()}">${c.status}</span><br>
+        ${escapeHtml(c.createdBy)} · ${fmtDate(c.createdAt)}
+      </div>
+    </div>
+  `).join('');
+  listEl.querySelectorAll('.case-row').forEach(row=>{
+    row.addEventListener('click', ()=> openCase(allCases.find(c=>c.id===row.dataset.id)));
+  });
+}
+
+document.getElementById('caseSearch').addEventListener('input', applyCaseFilters);
+document.getElementById('statusTabs').addEventListener('click', (e)=>{
+  if(!e.target.classList.contains('status-tab')) return;
+  document.querySelectorAll('.status-tab').forEach(t=>t.classList.remove('active'));
+  e.target.classList.add('active');
+  activeStatusFilter = e.target.dataset.status;
+  applyCaseFilters();
+});
+
+document.getElementById('createCaseForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const msgEl = document.getElementById('createCaseMsg');
+  clearMsg(msgEl);
+  try{
+    await api('/api/cases', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        caseNumber: document.getElementById('caseNumber').value,
+        title: document.getElementById('caseTitle').value,
+        description: document.getElementById('caseDescription').value
+      })
+    });
+    e.target.reset();
+    showMsg(msgEl, 'Case created.', 'ok');
+    loadCases();
+  }catch(err){
+    showMsg(msgEl, err.message, 'err');
+  }
+});
+
+function openCase(c){
+  currentCase = c;
+  document.getElementById('caseDetailTitle').textContent = `${c.caseNumber} — ${c.title}`;
+  document.getElementById('caseDetailSub').textContent = c.description || 'No description provided.';
+  document.getElementById('statusSelect').value = c.status;
+  document.getElementById('timelineCard').style.display = 'none';
+  renderAssignedInvestigators(c.assignedInvestigators || []);
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-case-detail').classList.add('active');
+  loadEvidence();
+}
+
+function renderAssignedInvestigators(usernames){
+  const el = document.getElementById('assignedInvestigatorsList');
+  if (!usernames.length) {
+    el.innerHTML = '<div class="empty">No one assigned yet.</div>';
+    return;
+  }
+  el.innerHTML = usernames.map(u => `<span style="display:inline-block; margin:0 6px 6px 0; padding:4px 10px; border-radius:999px; background:var(--panel-2); border:1px solid var(--border); font-family:var(--mono); font-size:11.5px;">${escapeHtml(u)}</span>`).join('');
+}
+
+document.getElementById('assignInvestigatorForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const msgEl = document.getElementById('assignMsg');
+  clearMsg(msgEl);
+  const usernameInput = document.getElementById('assignUsername');
+  try{
+    const updated = await api(`/api/cases/${currentCase.id}/assign`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ username: usernameInput.value })
+    });
+    currentCase = updated;
+    renderAssignedInvestigators(updated.assignedInvestigators || []);
+    usernameInput.value = '';
+    showMsg(msgEl, `${updated.assignedInvestigators[updated.assignedInvestigators.length-1] || 'User'} now has access to this case.`, 'ok');
+  }catch(err){
+    showMsg(msgEl, err.message, 'err');
+  }
+});
+
+document.getElementById('backToCases').addEventListener('click', ()=>{
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-cases').classList.add('active');
+  document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view==='cases'));
+});
+
+document.getElementById('statusSelect').addEventListener('change', async (e)=>{
+  try{
+    const updated = await api(`/api/cases/${currentCase.id}/status`, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ status: e.target.value })
+    });
+    currentCase = updated;
+    toast(`Case status changed to ${updated.status}`, 'ok');
+  }catch(err){
+    toast(err.message, 'err');
+    e.target.value = currentCase.status;
+  }
+});
+
+document.getElementById('downloadReportBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('downloadReportBtn');
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.innerHTML = '<span class="spinner"></span> Generating…';
+  try{
+    const blob = await api(`/api/cases/${currentCase.id}/report`);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `chain-of-custody-${currentCase.caseNumber}.pdf`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    toast('Report downloaded', 'ok');
+  }catch(err){
+    toast('Report generation failed: ' + err.message, 'err');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+});
+
+document.getElementById('toggleTimelineBtn').addEventListener('click', async ()=>{
+  const card = document.getElementById('timelineCard');
+  const isHidden = card.style.display === 'none';
+  card.style.display = isHidden ? 'block' : 'none';
+  if(isHidden) await loadTimeline();
+});
+
+async function loadTimeline(){
+  const listEl = document.getElementById('timelineList');
+  listEl.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const events = await api(`/api/cases/${currentCase.id}/timeline`);
+    if(events.length === 0){
+      listEl.innerHTML = '<div class="empty">No events yet for this case.</div>';
+      return;
+    }
+    listEl.innerHTML = events.map(e => `
+      <div class="tl-item">
+        <div class="tl-action">${e.action.replace(/_/g,' ')}</div>
+        <div class="tl-meta">${escapeHtml(e.actorUsername)} · ${fmtDate(e.timestamp)}</div>
+        ${e.details ? `<div class="tl-details">${escapeHtml(e.details)}</div>` : ''}
+      </div>
+    `).join('');
+  }catch(err){
+    listEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+}
+
+// ---------- evidence ----------
+let currentEvidence = [];
+
+async function loadEvidence(){
+  const listEl = document.getElementById('evidenceList');
+  listEl.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    currentEvidence = await api(`/api/cases/${currentCase.id}/evidence`);
+    renderEvidence();
+  }catch(err){
+    listEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+}
+
+function renderEvidence(){
+  const listEl = document.getElementById('evidenceList');
+  const items = currentEvidence;
+  if(items.length === 0){
+    listEl.innerHTML = '<div class="empty">No evidence uploaded yet.</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(ev => {
+    let statusClass = 'pending', statusText = 'not verified';
+    if(ev.lastVerificationPassed === true){ statusClass='verified'; statusText = 'verified ok'; }
+    if(ev.lastVerificationPassed === false){ statusClass='failed'; statusText = 'integrity FAILED'; }
+    const witnessed = ev.custodyStatus === 'WITNESSED';
+    return `
+    <div class="evidence-tag ${statusClass}" data-id="${ev.id}">
+      <div class="stub"></div>
+      <div class="evidence-body">
+        <div class="evidence-name">${escapeHtml(ev.originalFilename)}
+          <span class="status-pill ${statusClass==='verified'?'ok':statusClass==='failed'?'bad':'pending'}">${statusText}</span>
+          <span class="custody-pill ${witnessed ? 'witnessed':'pending'}">${witnessed ? '✓ witnessed by '+escapeHtml(ev.witnessUsername) : 'pending witness'}</span>
+        </div>
+        <div class="evidence-hash">SHA-256 ${ev.sha256Hash}</div>
+        <div class="evidence-hash">uploaded by ${escapeHtml(ev.uploadedBy)} · ${fmtDate(ev.uploadedAt)} · ${ev.originalSizeBytes} bytes</div>
+        <div class="evidence-actions">
+          <button class="btn ghost" data-action="verify" data-id="${ev.id}" title="Decrypts the file and recomputes its SHA-256 hash to confirm it still matches what was uploaded">Verify integrity</button>
+          <button class="btn ghost" data-action="download" data-id="${ev.id}" data-name="${escapeHtml(ev.originalFilename)}" title="Decrypts and downloads the original file">Download</button>
+          <button class="btn danger-ghost" data-action="delete" data-id="${ev.id}" title="Evidence is immutable by design - this will always be refused, and the attempt is logged">Attempt delete</button>
+        </div>
+        <div class="evidence-actions" style="margin-top:6px;">
+          <button class="btn ghost" data-action="filetype" data-id="${ev.id}" title="Checks the file's actual binary signature against its claimed extension">Detect file type</button>
+          <button class="btn ghost" data-action="hexdump" data-id="${ev.id}" title="Shows the first 512 bytes as offset / hex / ASCII">Hex dump</button>
+          <button class="btn ghost" data-action="strings" data-id="${ev.id}" title="Extracts readable text sequences from the file's raw bytes">Extract strings</button>
+        </div>
+        <div class="evidence-actions" style="margin-top:6px;">
+          <button class="btn ghost" data-action="signature" data-id="${ev.id}" title="Shows the RSA digital signature proving who certified this file">Verify signature</button>
+          <button class="btn ghost" data-action="similar" data-id="${ev.id}" title="Finds other evidence files with overlapping content">Find similar files</button>
+          ${witnessed ? '' : `<button class="btn ghost" data-action="witness" data-id="${ev.id}" title="A second investigator co-signs to satisfy two-person integrity">Witness this evidence</button>`}
+        </div>
+        <div class="analysis-panel" id="analysis-${ev.id}" style="display:none;"></div>
+        <button class="toggle-notes" data-action="toggle-notes" data-id="${ev.id}">Investigator notes ▾</button>
+        <div class="notes-section" id="notes-${ev.id}" style="display:none;">
+          <div class="notes-list" id="notes-list-${ev.id}"><div class="empty" style="padding:8px;">Loading notes…</div></div>
+          <div class="note-form">
+            <input type="text" placeholder="Add an investigator note…" data-note-input="${ev.id}">
+            <button class="btn ghost" data-action="add-note" data-id="${ev.id}">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('[data-action="verify"]').forEach(btn=>{
+    btn.addEventListener('click', ()=> verifyEvidence(btn.dataset.id));
+  });
+  listEl.querySelectorAll('[data-action="download"]').forEach(btn=>{
+    btn.addEventListener('click', ()=> downloadEvidence(btn.dataset.id, btn.dataset.name));
+  });
+  listEl.querySelectorAll('[data-action="delete"]').forEach(btn=>{
+    btn.addEventListener('click', ()=> attemptDeleteEvidence(btn.dataset.id));
+  });
+  listEl.querySelectorAll('[data-action="toggle-notes"]').forEach(btn=>{
+    btn.addEventListener('click', ()=> toggleNotes(btn.dataset.id));
+  });
+  listEl.querySelectorAll('[data-action="add-note"]').forEach(btn=>{
+    btn.addEventListener('click', ()=> addNote(btn.dataset.id));
+  });
+  listEl.querySelectorAll('[data-action="filetype"]').forEach(btn=>{
+    btn.addEventListener('click', ()=> runFileTypeCheck(btn.dataset.id));
+  });
+  listEl.querySelectorAll('[data-action="hexdump"]').forEach(btn=>{
+    btn.addEventListener('click', ()=> runHexDump(btn.dataset.id));
+  });
+  listEl.querySelectorAll('[data-action="strings"]').forEach(btn=>{
+    btn.addEventListener('click', ()=> runStrings(btn.dataset.id));
+  });
+  listEl.querySelectorAll('[data-action="signature"]').forEach(btn=>{
+    btn.addEventListener('click', ()=> runSignatureCheck(btn.dataset.id));
+  });
+  listEl.querySelectorAll('[data-action="similar"]').forEach(btn=>{
+    btn.addEventListener('click', ()=> runSimilarityCheck(btn.dataset.id));
+  });
+  listEl.querySelectorAll('[data-action="witness"]').forEach(btn=>{
+    btn.addEventListener('click', ()=> witnessEvidence(btn.dataset.id));
+  });
+}
+
+async function runSignatureCheck(evidenceId){
+  showAnalysisPanel(evidenceId, '<div class="empty" style="padding:6px 0;"><span class="spinner"></span> Verifying signature…</div>');
+  try{
+    const r = await api(`/api/evidence/${evidenceId}/signature`);
+    const html = `
+      <div class="analysis-row"><span class="k">Signed by</span><span class="v">${escapeHtml(r.signerUsername)}</span></div>
+      <div class="analysis-row"><span class="k">Public key fingerprint</span><span class="v">${escapeHtml(r.publicKeyFingerprint)}</span></div>
+      <div class="analysis-row"><span class="k">Signature (truncated)</span><span class="v">${escapeHtml(r.signatureBase64.slice(0,32))}…</span></div>
+      ${r.verified
+        ? '<div class="mismatch-warning" style="border-color:var(--green); background:rgba(76,175,125,.1); color:var(--green);">✓ Signature valid — cryptographically proven this investigator certified this exact hash.</div>'
+        : '<div class="mismatch-warning">⚠ Signature INVALID — this file may not be what the signer certified.</div>'}
+    `;
+    showAnalysisPanel(evidenceId, html);
+    toast(r.verified ? 'Signature verified' : 'Signature invalid', r.verified ? 'ok' : 'err');
+  }catch(err){
+    showAnalysisPanel(evidenceId, `<div class="msg err">${err.message}</div>`);
+  }
+}
+
+async function runSimilarityCheck(evidenceId){
+  showAnalysisPanel(evidenceId, '<div class="empty" style="padding:6px 0;"><span class="spinner"></span> Comparing against all evidence…</div>');
+  try{
+    const results = await api(`/api/evidence/${evidenceId}/similar`);
+    if(results.length === 0){
+      showAnalysisPanel(evidenceId, '<div class="empty" style="padding:8px 0;">No similar files found (nothing above 15% content overlap).</div>');
+      return;
+    }
+    const html = results.map(r => `
+      <div class="analysis-row"><span class="k">${escapeHtml(r.filename)} <span style="color:var(--text-faint);">(${escapeHtml(r.caseNumber)})</span></span><span class="v">${r.similarityPercent.toFixed(1)}%</span></div>
+    `).join('');
+    showAnalysisPanel(evidenceId, html);
+  }catch(err){
+    showAnalysisPanel(evidenceId, `<div class="msg err">${err.message}</div>`);
+  }
+}
+
+async function witnessEvidence(evidenceId){
+  try{
+    await api(`/api/evidence/${evidenceId}/witness`, { method:'POST' });
+    toast('Evidence witnessed — two-person integrity satisfied', 'ok');
+    await loadEvidence();
+  }catch(err){
+    toast(err.message, 'err');
+  }
+}
+
+function showAnalysisPanel(evidenceId, html){
+  const panel = document.getElementById(`analysis-${evidenceId}`);
+  panel.style.display = 'block';
+  panel.innerHTML = html;
+}
+
+async function runFileTypeCheck(evidenceId){
+  showAnalysisPanel(evidenceId, '<div class="empty" style="padding:6px 0;"><span class="spinner"></span> Analyzing…</div>');
+  try{
+    const r = await api(`/api/evidence/${evidenceId}/analysis/file-type`);
+    let html = `
+      <div class="analysis-row"><span class="k">Detected type</span><span class="v">${escapeHtml(r.detectedType)}</span></div>
+      <div class="analysis-row"><span class="k">Claimed extension</span><span class="v">.${escapeHtml(r.claimedExtension || '—')}</span></div>
+      <div class="analysis-row"><span class="k">Claimed content-type</span><span class="v">${escapeHtml(r.claimedContentType)}</span></div>
+      <div class="analysis-row"><span class="k">Signature bytes</span><span class="v">${escapeHtml(r.signatureHex || '—')}</span></div>
+    `;
+    if(r.mismatch){
+      html += `<div class="mismatch-warning">⚠ MISMATCH — file content does not match its claimed extension. This can indicate a disguised or renamed file.</div>`;
+      toast('File type mismatch detected', 'err');
+    } else {
+      toast('File type matches claimed extension', 'ok');
+    }
+    showAnalysisPanel(evidenceId, html);
+  }catch(err){
+    showAnalysisPanel(evidenceId, `<div class="msg err">${err.message}</div>`);
+  }
+}
+
+async function runHexDump(evidenceId){
+  showAnalysisPanel(evidenceId, '<div class="empty" style="padding:6px 0;"><span class="spinner"></span> Reading bytes…</div>');
+  try{
+    const r = await api(`/api/evidence/${evidenceId}/analysis/hexdump`);
+    const html = `
+      <div class="analysis-row"><span class="k">Showing</span><span class="v">${r.bytesShown} of ${r.totalFileSizeBytes} bytes</span></div>
+      <div class="hexdump" style="margin-top:8px;">${r.lines.map(escapeHtml).join('\n')}</div>
+    `;
+    showAnalysisPanel(evidenceId, html);
+  }catch(err){
+    showAnalysisPanel(evidenceId, `<div class="msg err">${err.message}</div>`);
+  }
+}
+
+async function runStrings(evidenceId){
+  showAnalysisPanel(evidenceId, '<div class="empty" style="padding:6px 0;"><span class="spinner"></span> Extracting strings…</div>');
+  try{
+    const r = await api(`/api/evidence/${evidenceId}/analysis/strings`);
+    let html = `<div class="analysis-row"><span class="k">Found</span><span class="v">${r.totalFound}${r.truncated ? ' (showing first ' + r.strings.length + ')' : ''}</span></div>`;
+    if(r.strings.length === 0){
+      html += '<div class="empty" style="padding:8px 0;">No printable strings of length 4+ found.</div>';
+    } else {
+      html += `<div class="strings-list" style="margin-top:8px;">${r.strings.map(s => `<div>${escapeHtml(s)}</div>`).join('')}</div>`;
+    }
+    showAnalysisPanel(evidenceId, html);
+  }catch(err){
+    showAnalysisPanel(evidenceId, `<div class="msg err">${err.message}</div>`);
+  }
+}
+
+async function toggleNotes(evidenceId){
+  const section = document.getElementById(`notes-${evidenceId}`);
+  const isHidden = section.style.display === 'none';
+  section.style.display = isHidden ? 'block' : 'none';
+  if(isHidden){
+    await refreshNotes(evidenceId);
+  }
+}
+
+async function refreshNotes(evidenceId){
+  const listEl = document.getElementById(`notes-list-${evidenceId}`);
+  try{
+    const notes = await api(`/api/evidence/${evidenceId}/notes`);
+    if(notes.length === 0){
+      listEl.innerHTML = '<div class="empty" style="padding:6px 0;">No notes yet.</div>';
+      return;
+    }
+    listEl.innerHTML = notes.map(n => `
+      <div class="note-item"><b>${n.authorUsername}</b> · ${fmtDate(n.createdAt)}<br>${escapeHtml(n.content)}</div>
+    `).join('');
+  }catch(err){
+    listEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+}
+
+async function addNote(evidenceId){
+  const input = document.querySelector(`[data-note-input="${evidenceId}"]`);
+  const content = input.value.trim();
+  if(!content) return;
+  try{
+    await api(`/api/evidence/${evidenceId}/notes`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ content })
+    });
+    input.value = '';
+    await refreshNotes(evidenceId);
+  }catch(err){
+    toast(err.message, 'err');
+  }
+}
+
+async function attemptDeleteEvidence(id){
+  try{
+    await api(`/api/evidence/${id}`, { method:'DELETE' });
+    toast('Deleted.', 'ok'); // unreachable in practice - server always refuses
+  }catch(err){
+    toast(err.message, 'err');
+  }
+}
+
+document.getElementById('uploadForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const msgEl = document.getElementById('uploadMsg');
+  const btn = document.getElementById('uploadBtn');
+  clearMsg(msgEl);
+  const fileInput = document.getElementById('evidenceFile');
+  if(!fileInput.files[0]) return;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Encrypting &amp; uploading…';
+  try{
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    const res = await fetch(`${API}/api/cases/${currentCase.id}/evidence`, {
+      method:'POST', headers: authHeaders(), body: formData
+    });
+    if(!res.ok){
+      const body = await res.json();
+      throw new Error(body.message || 'Upload failed');
+    }
+    const ev = await res.json();
+    await loadEvidence();
+    showMsg(msgEl, 'Uploaded and encrypted. SHA-256 fingerprint recorded.', 'ok');
+    toast(`"${ev.originalFilename}" uploaded and encrypted`, 'ok');
+    e.target.reset();
+  }catch(err){
+    showMsg(msgEl, err.message, 'err');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Upload & encrypt';
+  }
+});
+
+async function verifyEvidence(id){
+  try{
+    const res = await api(`/api/evidence/${id}/verify`, { method:'POST' });
+    await loadEvidence();
+    toast(res.integrityPassed ? 'Integrity verified - untouched' : 'INTEGRITY FAILED - file has changed', res.integrityPassed ? 'ok':'err');
+  }catch(err){
+    toast('Verification failed: ' + err.message, 'err');
+  }
+}
+
+async function downloadEvidence(id, filename){
+  try{
+    const blob = await api(`/api/evidence/${id}/download`);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }catch(err){
+    toast('Download failed: ' + err.message, 'err');
+  }
+}
+
+// ---------- audit chain ----------
+async function loadAuditChain(){
+  const listEl = document.getElementById('chainList');
+  const statusEl = document.getElementById('chainStatus');
+  statusEl.innerHTML = '';
+  listEl.innerHTML = '<div class="empty">Loading audit log…</div>';
+  try{
+    const entries = await api('/api/audit/chain');
+    renderChain(entries, null);
+  }catch(err){
+    listEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+  loadAnomalies();
+}
+
+async function loadAnomalies(){
+  const el = document.getElementById('anomalyList');
+  try{
+    const flags = await api('/api/audit/anomalies');
+    if(flags.length === 0){
+      el.innerHTML = '<div class="empty">No anomalies detected.</div>';
+      return;
+    }
+    el.innerHTML = flags.map(f => `
+      <div class="analysis-row" style="align-items:flex-start;">
+        <span class="k" style="color:var(--red);">${escapeHtml(f.reason)}</span>
+        <span class="v">${escapeHtml(f.actorUsername)} · ${fmtDate(f.timestamp)}<br><span style="color:var(--text-faint); font-size:10.5px;">${escapeHtml(f.details)}</span></span>
+      </div>
+    `).join('');
+  }catch(err){
+    el.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+}
+
+function renderChain(entries, verifyResult){
+  const listEl = document.getElementById('chainList');
+  if(entries.length === 0){
+    listEl.innerHTML = '<div class="empty">No audit entries yet.</div>';
+    return;
+  }
+  const brokenSeq = (verifyResult && !verifyResult.intact) ? verifyResult.lastValidSequence + 1 : -1;
+  listEl.innerHTML = entries.map(e => {
+    const isBroken = e.sequenceNumber === brokenSeq;
+    return `
+    <div class="link ${isBroken?'broken-link':''}">
+      <div class="link-card ${isBroken?'broken':''}">
+        <div class="link-top">
+          <span class="link-action">${e.action}</span>
+          <span class="link-seq">#${e.sequenceNumber}</span>
+        </div>
+        <div class="link-actor">${escapeHtml(e.actorUsername)} · ${fmtDate(e.timestamp)}</div>
+        ${e.details ? `<div class="link-details">${escapeHtml(e.details)}</div>` : ''}
+        <div class="link-hashes">
+          <span><b>prev</b> ${shortHash(e.previousHash)}</span>
+          <span><b>hash</b> ${shortHash(e.entryHash)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('verifyChainBtn').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('chainStatus');
+  const btn = document.getElementById('verifyChainBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Verifying…';
+  try{
+    const result = await api('/api/audit/verify-chain', { method:'POST' });
+    statusEl.innerHTML = `
+      <div class="chain-status ${result.intact ? 'intact':'broken'}">
+        <div class="chain-dot"></div>
+        <div class="chain-status-text">
+          <div class="title">${result.intact ? 'CHAIN INTACT' : 'TAMPERING DETECTED'}</div>
+          <div class="sub">${escapeHtml(result.message)}</div>
+        </div>
+      </div>`;
+    const entries = await api('/api/audit/chain');
+    renderChain(entries, result);
+  }catch(err){
+    statusEl.innerHTML = `<div class="msg err">${err.message}</div>`;
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Verify chain integrity';
+  }
+});
+
+document.getElementById('exportChainBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('exportChainBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Exporting…';
+  try{
+    // The export endpoint returns JSON (parsed automatically by api()); we re-serialize it into
+    // a Blob here so the browser triggers a real file download instead of showing raw JSON.
+    const data = await api('/api/audit/export');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit-chain-export-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Chain exported - verify it independently any time by recomputing each entryHash.', 'ok');
+  }catch(err){
+    toast(err.message, 'err');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Export chain as JSON';
+  }
+});
+
+function escapeHtml(s){
+  if(s === null || s === undefined) return '';
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------- boot ----------
+if(TOKEN){ enterApp(); }
+</script>
+</body>
+</html>
