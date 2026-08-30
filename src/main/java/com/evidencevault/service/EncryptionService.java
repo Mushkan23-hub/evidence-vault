@@ -136,6 +136,40 @@ public class EncryptionService {
                     : new IllegalStateException("Decryption failed - ciphertext may be corrupted or tampered with", currentKeyFailure);
         }
     }
+        /** Encrypts arbitrary text at rest under the master key - for secrets that need to be
+     *  recovered in full (e.g. a user's RSA private key) as opposed to wrapKey/unwrapKey, which
+     *  is specifically for AES DEKs. IV is stored alongside the ciphertext in one Base64 string
+     *  so callers only need to persist a single column. */
+    public String encryptStringWithMasterKey(String plaintext) {
+        byte[] iv = generateIv();
+        byte[] ciphertext = encrypt(plaintext.getBytes(java.nio.charset.StandardCharsets.UTF_8), iv);
+        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(iv.length + ciphertext.length);
+        buffer.put(iv).put(ciphertext);
+        return Base64.getEncoder().encodeToString(buffer.array());
+    }
+
+    /** Reverses encryptStringWithMasterKey(). Tries the current master key first, then falls back
+     *  through retired keys, same rotation-safety as unwrapKey(). */
+    public String decryptStringWithMasterKey(String storedBase64) {
+        byte[] combined = Base64.getDecoder().decode(storedBase64);
+        byte[] iv = java.util.Arrays.copyOfRange(combined, 0, IV_LENGTH_BYTES);
+        byte[] ciphertext = java.util.Arrays.copyOfRange(combined, IV_LENGTH_BYTES, combined.length);
+        try {
+            byte[] plaintext = decryptWithKey(ciphertext, iv, masterKey);
+            return new String(plaintext, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception currentKeyFailure) {
+            for (SecretKey oldKey : previousMasterKeys) {
+                try {
+                    byte[] plaintext = decryptWithKey(ciphertext, iv, oldKey);
+                    return new String(plaintext, java.nio.charset.StandardCharsets.UTF_8);
+                } catch (Exception ignored) {
+                    // try the next retired key
+                }
+            }
+            throw currentKeyFailure instanceof IllegalStateException ise ? ise
+                    : new IllegalStateException("Decryption failed - ciphertext may be corrupted or tampered with", currentKeyFailure);
+        }
+    }
 
     /** True once a case's DEK has already been re-wrapped under the current master key - i.e.
      *  unwrapping it succeeds without needing to fall back to any retired key. Used to report

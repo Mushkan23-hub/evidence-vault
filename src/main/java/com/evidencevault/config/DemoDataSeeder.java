@@ -69,7 +69,7 @@ public class DemoDataSeeder implements CommandLineRunner {
                     .password(passwordEncoder.encode(DEMO_PASSWORD))
                     .role(Role.INVESTIGATOR)
                     .rsaPublicKey(keyPair.publicKeyBase64())
-                    .rsaPrivateKey(keyPair.privateKeyBase64())
+                    .rsaPrivateKey(encryptionService.encryptStringWithMasterKey(keyPair.privateKeyBase64()))
                     .build();
             return userRepository.save(u);
         });
@@ -105,7 +105,8 @@ public class DemoDataSeeder implements CommandLineRunner {
         java.nio.file.Files.createDirectories(storagePath);
         java.nio.file.Files.write(storagePath.resolve(storedFilename), ciphertext);
 
-        String signature = signatureService.sign(demoUser.getRsaPrivateKey(), sha256);
+        String privateKey = encryptionService.decryptStringWithMasterKey(demoUser.getRsaPrivateKey());
+        String signature = signatureService.sign(privateKey, sha256);
         Set<String> fingerprint = similarityService.fingerprint(plaintext);
 
         EvidenceFile demoEvidence = EvidenceFile.builder()

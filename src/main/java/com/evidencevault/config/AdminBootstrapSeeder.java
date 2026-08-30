@@ -36,6 +36,7 @@ public class AdminBootstrapSeeder implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final SignatureService signatureService;
+    private final com.evidencevault.service.EncryptionService encryptionService;
 
     @Value("${evidencevault.bootstrap-admin.username:}")
     private String bootstrapUsername;
@@ -74,7 +75,7 @@ public class AdminBootstrapSeeder implements CommandLineRunner {
                 .password(passwordEncoder.encode(bootstrapPassword))
                 .role(Role.ADMIN)
                 .rsaPublicKey(keyPair.publicKeyBase64())
-                .rsaPrivateKey(keyPair.privateKeyBase64())
+                .rsaPrivateKey(encryptionService.encryptStringWithMasterKey(keyPair.privateKeyBase64()))
                 .build();
         userRepository.save(admin);
 

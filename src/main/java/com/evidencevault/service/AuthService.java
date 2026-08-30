@@ -32,6 +32,8 @@ public class AuthService {
     private final TotpService totpService;
     private final TokenBlacklistService tokenBlacklistService;
     private final com.evidencevault.repository.EvidenceFileRepository evidenceFileRepository;
+    private final EncryptionService encryptionService;
+    
 
     @org.springframework.beans.factory.annotation.Value("${evidencevault.storage.max-user-quota-bytes:5368709120}")
     private long maxUserQuotaBytes;
@@ -58,7 +60,7 @@ public class AuthService {
 
         SignatureService.KeyPairData keyPair = signatureService.generateKeyPair();
         user.setRsaPublicKey(keyPair.publicKeyBase64());
-        user.setRsaPrivateKey(keyPair.privateKeyBase64());
+        user.setRsaPrivateKey(encryptionService.encryptStringWithMasterKey(keyPair.privateKeyBase64()));
 
         userRepository.save(user);
 

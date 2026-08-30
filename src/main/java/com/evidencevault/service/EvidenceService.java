@@ -85,7 +85,8 @@ public class EvidenceService {
             Files.write(storagePath.resolve(storedFilename), ciphertext);
 
             // Digital signature: uploader's private key signs the hash, proving WHO certified this file
-            String signature = signatureService.sign(uploader.getRsaPrivateKey(), sha256);
+            String privateKey = encryptionService.decryptStringWithMasterKey(uploader.getRsaPrivateKey());
+            String signature = signatureService.sign(privateKey, sha256);
 
             // Similarity fingerprint for near-duplicate detection
             Set<String> fingerprint = similarityService.fingerprint(plaintext);
