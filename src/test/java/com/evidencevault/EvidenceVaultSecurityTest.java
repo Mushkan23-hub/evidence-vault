@@ -79,7 +79,11 @@ class EvidenceVaultSecurityTest {
             what + " should be rejected with 401/403 but was " + r.statusCode());
     }
 
-    private static final String CASE_JSON = "{\"caseNumber\":\"T-1\",\"title\":\"t\",\"description\":\"t\"}";
+    /** A fresh case number every time: case numbers are unique, so a fixed one collides between tests and runs. */
+    private static String caseJson() {
+        return "{\"caseNumber\":\"T-" + UUID.randomUUID().toString().substring(0, 8)
+            + "\",\"title\":\"t\",\"description\":\"t\"}";
+    }
 
     // ------------------------------------------------------------------ tests
     @Test
@@ -97,23 +101,24 @@ class EvidenceVaultSecurityTest {
     @Test
     void tokenWithModifiedSignatureIsRejected() throws Exception {
         String token = registerAndLogin("");
-        char last = token.charAt(token.length() - 1);
-        String tampered = token.substring(0, token.length() - 1) + (last == 'A' ? 'B' : 'A');
-        assertRejected(send("POST", "/api/cases", tampered, CASE_JSON), "a token with a modified signature");
+        int sigStart = token.lastIndexOf('.') + 1;
+        char first = token.charAt(sigStart);
+        String tampered = token.substring(0, sigStart) + (first == 'A' ? 'B' : 'A') + token.substring(sigStart + 1);
+        assertRejected(send("POST", "/api/cases", tampered, caseJson()), "a token with a modified signature");
     }
 
     @Test
     void tokenIsRevokedImmediatelyAfterLogout() throws Exception {
         String token = registerAndLogin("");
         send("POST", "/api/auth/logout", token, null);
-        assertRejected(send("POST", "/api/cases", token, CASE_JSON), "a token used after logout");
+        assertRejected(send("POST", "/api/cases", token, caseJson()), "a token used after logout");
     }
 
     @Test
     void anotherUserCannotFreezeMyCase() throws Exception {
         String owner = registerAndLogin("");
         String other = registerAndLogin("");
-        HttpResponse<String> created = send("POST", "/api/cases", owner, CASE_JSON);
+        HttpResponse<String> created = send("POST", "/api/cases", owner, caseJson());
         String caseId = find(ID, created.body());
         assertNotNull(caseId, "case creation should return an id, got: " + created.statusCode() + " " + created.body());
         HttpResponse<String> r = send("POST", "/api/cases/" + caseId + "/freeze", other, null);
