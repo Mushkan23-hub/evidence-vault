@@ -8,7 +8,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests -B
 
 # --- Run stage ---
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:22-jre-jammy
 WORKDIR /app
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl \
