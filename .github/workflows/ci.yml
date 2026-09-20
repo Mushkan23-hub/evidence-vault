@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Generate throwaway secrets for the test run (nothing sensitive is stored in the repo)
+        run: |
+          echo "JWT_SECRET_BASE64=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          echo "EVIDENCE_MASTER_KEY_BASE64=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          echo "SEED_DEMO_DATA=false" >> "$GITHUB_ENV"
+      - name: Build and test
+        run: mvn -B verify
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the Docker image builds
+        run: docker build -t evidence-vault .
