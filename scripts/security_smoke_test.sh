@@ -65,8 +65,11 @@ check "User who registered with role=ADMIN cannot reach admin endpoint" "403" \
     "$(code "$BASE/api/audit/chain" -H "Authorization: Bearer $TOKEN_A")"
 
 echo "[3] Token tampering"
-FLIP='A'; [[ "${TOKEN_A: -1}" == "A" ]] && FLIP='B'
-BAD_SIG="${TOKEN_A%?}$FLIP"
+# Change the FIRST character of the signature. (The last base64url character of an HS256 signature has
+# 2 unused padding bits, so changing it is silently ignored about 1 time in 16.)
+SIG_PART="${TOKEN_A##*.}"; SIG_FIRST="${SIG_PART:0:1}"
+if [[ "$SIG_FIRST" == "A" ]]; then SIG_NEW="B"; else SIG_NEW="A"; fi
+BAD_SIG="${TOKEN_A%.*}.${SIG_NEW}${SIG_PART:1}"
 check "JWT with modified signature is rejected" "401|403" \
     "$(code "$BASE/api/cases" -X POST -H "Authorization: Bearer $BAD_SIG" -H 'Content-Type: application/json' -d "$CASE_BODY")"
 PAYLOAD="$(echo "$TOKEN_A" | cut -d. -f2)"

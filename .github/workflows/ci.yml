@@ -17,6 +17,8 @@ jobs:
           echo "JWT_SECRET_BASE64=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
           echo "EVIDENCE_MASTER_KEY_BASE64=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
           echo "SEED_DEMO_DATA=false" >> "$GITHUB_ENV"
+          echo "DATABASE_URL=jdbc:h2:mem:testdb" >> "$GITHUB_ENV"
+          echo "EVIDENCE_STORAGE_DIR=$RUNNER_TEMP/evidence-blobs" >> "$GITHUB_ENV"
       - name: Build and test
         run: mvn -B verify
   docker:
